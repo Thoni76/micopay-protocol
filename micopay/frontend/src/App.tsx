@@ -12,6 +12,7 @@ import QRReveal from "./pages/QRReveal";
 import DepositQR from "./pages/DepositQR";
 import SuccessScreen from "./pages/SuccessScreen";
 import Explore from "./pages/Explore";
+import History from "./pages/History";
 import CETESScreen from "./pages/CETESScreen";
 import BlendScreen from "./pages/BlendScreen";
 import MerchantInbox from "./pages/MerchantInbox";
@@ -28,7 +29,6 @@ import {
 } from "./services/api";
 
 interface AppProps {
-  /** Cold `/trade/:id` entry (issue #31) — optional deep link bootstrap. */
   initialTradeId?: string | null;
 }
 
@@ -36,7 +36,6 @@ function App({ initialTradeId = null }: AppProps) {
   const [currentPage, setCurrentPage] = useState<'home' | string>('home');
   const [flow, setFlow] = useState<'cashout' | 'deposit' | null>(null);
 
-  // API state
   const [buyerUser, setBuyerUser] = useState<UserData | null>(null);
   const [sellerUser, setSellerUser] = useState<UserData | null>(null);
   const [activeTrade, setActiveTrade] = useState<TradeData | null>(null);
@@ -44,14 +43,12 @@ function App({ initialTradeId = null }: AppProps) {
   const [activeAmount, setActiveAmount] = useState(500);
   const [tradeLoading, setTradeLoading] = useState(false);
 
-  // Estados adicionales
   const [tradeDetailId, setTradeDetailId] = useState<string | null>(null);
   const [tradeCreationError, setTradeCreationError] = useState<string | null>(null);
   const [cancelledScreen, setCancelledScreen] = useState<any>(null);
   const [cashoutDraft, setCashoutDraft] = useState('500');
   const [depositDraft, setDepositDraft] = useState('500');
 
-  // Auto-register buyer + mock seller
   useEffect(() => {
     const initUsers = async () => {
       try {
@@ -153,4 +150,193 @@ function App({ initialTradeId = null }: AppProps) {
   return (
     <ErrorBoundary>
       <div className="flex flex-col min-h-screen bg-[#F4FAFF]">
-        {currentPage === 'home
+        {currentPage === "home" && (
+          <Home
+            onNavigateCashout={startCashout}
+            onNavigateDeposit={startDeposit}
+            onNavigateHistory={() => setCurrentPage("history")}
+            token={buyerUser?.token ?? null}
+            merchantToken={sellerUser?.token ?? null}
+            onNavigateInbox={() => setCurrentPage("inbox")}
+          />
+        )}
+
+        {currentPage === "history" && (
+          <History
+            onBack={() => setCurrentPage("home")}
+            onSelectTrade={(trade) => {
+              if (trade.status === "revealing") {
+                console.log("Open trade:", trade.id);
+              }
+            }}
+            token={buyerUser?.token ?? null}
+          />
+        )}
+
+        {currentPage === "inbox" && (
+          <MerchantInbox
+            token={sellerUser?.token ?? null}
+            onBack={() => setCurrentPage("home")}
+          />
+        )}
+
+        {currentPage === "cashout" && (
+          <CashoutRequest
+            onBack={() => setCurrentPage("home")}
+            onSearch={(amount) => {
+              setActiveAmount(amount);
+              setCurrentPage("map");
+            }}
+          />
+        )}
+
+        {currentPage === "deposit" && (
+          <DepositRequest
+            onBack={() => setCurrentPage("home")}
+            onSearch={(amount) => {
+              setActiveAmount(Number(amount) || 500);
+              setCurrentPage("map_deposit");
+            }}
+          />
+        )}
+
+        {currentPage === "map_deposit" && (
+          <DepositMap
+            onBack={() => setCurrentPage("deposit")}
+            onSelectOffer={handleDepositOfferSelected}
+            loading={tradeLoading}
+          />
+        )}
+
+        {currentPage === "map" && (
+          <ExploreMap
+            amount={activeAmount}
+            loading={tradeLoading}
+            onBack={() => setCurrentPage("cashout")}
+            onSelectOffer={handleOfferSelected}
+          />
+        )}
+
+        {currentPage === "chat" && (
+          <ChatRoom
+            lockTxHash={lockTxHash}
+            onBack={() => setCurrentPage("map")}
+            onViewQR={() => {
+              setCurrentPage("qr_reveal");
+            }}
+          />
+        )}
+
+        {currentPage === "chat_deposit" && (
+          <DepositChat
+            lockTxHash={lockTxHash}
+            onBack={() => setCurrentPage("map_deposit")}
+            onViewQR={() => {
+              setCurrentPage("qr_deposit");
+            }}
+          />
+        )}
+
+        {currentPage === "qr_reveal" && (
+          <QRReveal
+            activeTrade={activeTrade}
+            sellerToken={sellerUser?.token ?? null}
+            buyerToken={buyerUser?.token ?? null}
+            amount={activeAmount}
+            onBack={() => setCurrentPage("chat")}
+            onChat={() => setCurrentPage("chat")}
+            onSuccess={() => {
+              setCurrentPage("success");
+            }}
+          />
+        )}
+
+        {currentPage === "qr_deposit" && (
+          <DepositQR
+            onBack={() => setCurrentPage("chat_deposit")}
+            onChat={() => setCurrentPage("chat_deposit")}
+            onSuccess={() => {
+              setCurrentPage("success");
+            }}
+          />
+        )}
+
+        {currentPage === "success" && (
+          <SuccessScreen
+            type={flow === "cashout" ? "cashout" : "deposit"}
+            amount={activeAmount.toFixed(2)}
+            commission={
+              flow === "cashout"
+                ? (activeAmount * 0.01).toFixed(2)
+                : (activeAmount * 0.008).toFixed(2)
+            }
+            received={
+              flow === "cashout"
+                ? `$${(activeAmount * 0.99).toFixed(2)} MXN`
+                : `${(activeAmount * 0.992).toFixed(0)} MXN`
+            }
+            agentName={
+              flow === "cashout" ? "Farmacia Guadalupe" : "Tienda Don Pepe"
+            }
+            tradeId={activeTrade?.id}
+            lockTxHash={lockTxHash}
+            onHome={() => {
+              setFlow(null);
+              setActiveTrade(null);
+              setLockTxHash(null);
+              setCurrentPage("home");
+            }}
+          />
+        )}
+
+        {currentPage === "explore" && (
+          <Explore
+            onBack={() => setCurrentPage("home")}
+            onNavigate={handleNavigate}
+          />
+        )}
+
+        {currentPage === "cetes" && (
+          <CETESScreen
+            onBack={() => setCurrentPage("explore")}
+            onBanco={() => setCurrentPage("deposit")}
+            userToken={buyerUser?.token}
+          />
+        )}
+
+        {currentPage === "blend" && (
+          <BlendScreen
+            onBack={() => setCurrentPage("explore")}
+            userToken={buyerUser?.token}
+          />
+        )}
+
+        {currentPage === "profile" && (
+          <Profile
+            token={buyerUser?.token ?? null}
+            onBack={() => setCurrentPage("home")}
+            onDeleted={handleAccountDeleted}
+          />
+        )}
+
+        {![
+          "chat",
+          "chat_deposit",
+          "qr_reveal",
+          "qr_deposit",
+          "success",
+          "cetes",
+          "blend",
+        ].includes(currentPage) && (
+          <BottomNav
+            currentPage={currentPage}
+            onNavigate={handleNavigate}
+            isMerchant={!!sellerUser}
+          />
+        )}
+      </div>
+    </ErrorBoundary>
+  );
+}
+
+export default App;
