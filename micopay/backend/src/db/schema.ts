@@ -29,6 +29,8 @@ function resolveVal(token: string, params: any[]): any {
   if (pMatch) return params[parseInt(pMatch[1]) - 1];
   if (t.toUpperCase() === "NOW()") return memNow();
   if (t.toUpperCase() === "NULL") return null;
+  if (t.toUpperCase() === "TRUE") return true;
+  if (t.toUpperCase() === "FALSE") return false;
   const strMatch = t.match(/^'(.*)'$/s);
   if (strMatch) return strMatch[1];
   return t;
@@ -38,9 +40,24 @@ function colName(token: string) {
   return token.includes(".") ? token.split(".").pop()! : token;
 }
 
+function hasMatchingOuterParentheses(sql: string): boolean {
+  if (!sql.startsWith("(") || !sql.endsWith(")")) return false;
+  let depth = 0;
+  for (let i = 0; i < sql.length - 1; i++) {
+    const ch = sql[i];
+    if (ch === "(") depth++;
+    else if (ch === ")") depth--;
+    if (depth === 0) return false;
+  }
+  return depth === 1 && sql[sql.length - 1] === ")";
+}
+
 function evalCondition(row: any, clause: string, params: any[]): boolean {
-  // Remove outer parentheses
-  const trimmed = clause.trim().replace(/^\((.+)\)$/, "$1");
+  // Remove matching outer parentheses
+  let trimmed = clause.trim();
+  while (hasMatchingOuterParentheses(trimmed)) {
+    trimmed = trimmed.slice(1, -1).trim();
+  }
 
   // Try OR split (lowest precedence)
   const orParts = splitByKeyword(trimmed, "OR");
@@ -206,6 +223,23 @@ function memQuery(sql: string, params: any[] = []): any[] {
       evalCondition(row, whereStr, params),
     );
     rows.forEach((row) => Object.assign(row, updates));
+    return [];
+  }
+
+  // ── DELETE ───────────────────────────────────────────────────────────────
+  if (upper.startsWith("DELETE")) {
+    const tableMatch = s.match(/DELETE FROM\s+(\w+)(?:\s+WHERE\s+(.+))?$/i);
+    if (!tableMatch) return [];
+    const tableName = tableMatch[1].toLowerCase();
+    const whereStr = tableMatch[2];
+
+    if (!whereStr) {
+      mem[tableName] = [];
+    } else {
+      mem[tableName] = (mem[tableName] ?? []).filter(
+        (row) => !evalCondition(row, whereStr, params)
+      );
+    }
     return [];
   }
 
