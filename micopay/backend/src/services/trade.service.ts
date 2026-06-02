@@ -240,8 +240,19 @@ export async function createTrade(input: CreateTradeInput) {
     },
   });
 
+  // Fire-and-forget — push failure must never fail trade creation
+  const buyerUsername = buyer.username || buyer.stellar_address || 'Usuario';
+  sendTradeNotificationToMerchant(sellerId, {
+    tradeId: result.id,
+    amount: `${amountMxn.toLocaleString('es-MX')} MXN`,
+    buyerUsername,
+  }).catch(err => {
+    logger.error({ err, trade_id: result.id, category: 'trade.lifecycle' }, '[trade] Push notification failed silently');
+  });
+
   return result;
 }
+
 
 export async function getTradeById(tradeId: string, userId: string) {
   const trade = await db.getOne('SELECT * FROM trades WHERE id = $1', [tradeId]);
