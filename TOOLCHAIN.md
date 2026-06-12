@@ -30,9 +30,11 @@ nargo compile
 # Generate witness (replaces deprecated nargo prove --input)
 nargo execute witness
 
-# Generate UltraHonk proof + VK
-bb prove -b target/poseidon_preimage.json -w target/witness.gz -o target/
-bb write_vk -b target/poseidon_preimage.json -o target/
+# Generate UltraHonk proof + VK (MUST use --output_format bytes_and_fields for correct G1 point encoding)
+bb prove --scheme ultra_honk --oracle_hash keccak -b target/poseidon_preimage.json -w target/witness.gz --output_path ~/zkwork --output_format bytes_and_fields
+# VK (always generate in Linux FS due to NTFS permission issues; copy result back)
+bb write_vk --scheme ultra_honk --oracle_hash keccak -b target/poseidon_preimage.json --output_path ~/zkwork --output_format bytes_and_fields
+cp ~/zkwork/vk /mnt/c/Users/eric/Desktop/HACKATON/circuits/poseidon_preimage/target/vk/vk
 
 # Run nargo tests
 nargo test
@@ -163,6 +165,8 @@ X402_MOCK_MODE=true
 - **std::hash::poseidon::bn254 NOT EXPORTED** in nargo 1.0.0-beta.9: The `poseidon` module is private. Circuits use `std::hash::pedersen_hash` instead (BN254-native).
 - **bb needs jq**: `bb prove` and `bb write_vk` invoke `jq` externally. Install: `sudo apt-get install -y jq`.
 - **bb and NTFS**: Proof generation fails from `/mnt/c/...`. Copy artifacts to Linux FS first, then run bb, then copy back.
+- **bb write_vk — MUST use `--output_format bytes_and_fields`**: Without this flag, G1 points in the VK are written in a different byte encoding that exceeds the BN254 prime (values > p). The `ultrahonk_soroban_verifier` crate's `Bn254G1Affine::from_array` requires standard-form Fp elements (< p). With `bytes_and_fields`, bb writes points in the correct format; without it, the format is wrong and `Error(Crypto, InvalidInput)` occurs at verification time.
+- **bb write_vk output path**: `--output_path <dir>` creates `<dir>/vk` (flat file, 1760 bytes) when `--output_format bytes_and_fields` is used. The older behavior of creating `<dir>/vk/vk` (directory + file, 1764 bytes with 4-byte trailer) only occurs without the `bytes_and_fields` flag.
 - **PROOF_BYTES = 14592**: UltraHonk proofs = 456 x 32 bytes. Confirmed against `PROOF_FIELDS = 456` in ultrahonk_soroban_verifier.
 - **Non-ASCII in Noir comments**: nargo 1.0.0-beta.9 rejects non-ASCII in comments. Use ASCII only.
 - **bb verify public inputs path**: `bb verify` hardcodes `./target/public_inputs`. Run from the directory that contains `target/public_inputs`.
@@ -194,3 +198,34 @@ X402_MOCK_MODE=true
 Explorer: https://stellar.expert/explorer/testnet/tx/30eab1f185db57468a000247ca059614f4a9fe7ffe6720e46083a04cbda1ce7a
 
 **Exit criterion met: UltraHonk proof verified on-chain on Stellar testnet.**
+
+---
+
+## ZkVerifierRegistry Deployment (COMPLETE — 2026-06-12)
+
+| Item | Value |
+|---|---|
+| Contract ID | `CC6YHSKDTINV4XSZNVT42XW4GPJIANNKNNKG73HYTO2OJ7DPF55A33UG` |
+| Admin | `GDQLSQW6CUWP5UDIFYSOUHJ7NA4S4NRC2PXOIWMCU7IWXJOBXEPHQ3G6` (alice) |
+| Init tx | `5a20b5cea9af1627b1c593bedfb0749882bc5dd451146996b545a889ebe2df20` |
+| Register poseidon_preimage tx | `becd9f03b13748f10ee742879560f57d58e5f0a3e3a0d53d15079f37aa5e203b` |
+| Register reputation_v1 tx | `db7cfae4628757dcc467e873345dd31b53d9bed1b554ad8f1ada5645107b36eb` |
+| set_reputation_root tx | `ebe63edc1cb45f2aad6b1e7379f7c5706495fe19922d50c1da38ed19435b987b` |
+| Demo root | `0x079fa7cd6ecb9dc5b48eedf99357995c04771a815c19072ac63b0f1265868bd5` |
+
+---
+
+## Demo B Result (COMPLETE — 2026-06-12)
+
+Anonymous reputation ZK proof verified on-chain (reputation_v1 circuit).
+
+| Item | Value |
+|---|---|
+| Circuit | `reputation_v1` |
+| Prover | alice (GOLD tier, secret=1001) |
+| Proof size | 14592 bytes |
+| Claim | tier >= SILVER (threshold=2) |
+| On-chain verify tx | `330be3e4eae61901526206d33438e38e5b90a65d16871ef1727d5bc075902974` |
+| Explorer | https://stellar.expert/explorer/testnet/tx/330be3e4eae61901526206d33438e38e5b90a65d16871ef1727d5bc075902974 |
+
+**Agent B learns: counterparty tier >= SILVER. Learns NOTHING about identity or exact tier.**
