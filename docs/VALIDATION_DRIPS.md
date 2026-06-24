@@ -110,7 +110,40 @@ _(no responses yet)_
 * **Would getting it as cash nearby, same day, help YOU?:** Yes. Eliminating the P2P counterparty matching phase and having an immediate, compliant, same-day physical cash-out point nearby would drastically reduce transactional friction and eliminate exchange-rate slippage.
 
 ### V-7 · Current alternatives & switching
-_(no responses yet)_
+Small anonymized sample (N=4; self + 3 peers, convenience sample across Mexico and other Latin American regions):
+
+- Respondent A — Monterrey region, Mexico
+  - What they use today: OXXO stores and traditional bank ATMs.
+  - What they like: High availability and the security of established, well-known brands.
+  - What frustrates them: High transaction/convenience fees, long wait lines, and occasional ATM outages.
+  - What would make them switch: Lower fees, zero queue times, and local neighborhood exchange points.
+  - Dealbreaker: Upfront payment/fees before receiving cash, or overly complex apps that require advanced crypto/technical knowledge.
+
+- Respondent B — Bogotá area, Colombia
+  - What they use today: Mobile wallets (Nequi, Daviplata) and physical lottery kiosks (Efecty, Paga Todo) for cash-out.
+  - What they like: Instant digital transfers and wide physical availability of cash points.
+  - What frustrates them: Frequent app system outages, daily transaction limits, and high agent commissions.
+  - What would make them switch: A highly reliable system working 24/7 with transparent, lower fees and flexible limits.
+  - Dealbreaker: Lack of immediate transaction confirmation or lack of support channels to resolve stuck operations.
+
+- Respondent C — Buenos Aires, Argentina
+  - What they use today: Local informal exchange houses ("cuevas") and P2P crypto exchanges (Binance P2P).
+  - What they like: Inflation hedging by holding stablecoins (USDT) and converting to fiat cash as needed.
+  - What frustrates them: Safety risks of carrying physical cash from physical exchanges, and counterparty trust issues in online P2P.
+  - What would make them switch: A secure, trust-rated network of local merchants/providers for safe, local stablecoin-to-cash exchange.
+  - Dealbreaker: High platform service fees or mandatory KYC that requires multi-day validation for tiny transactions.
+
+- Respondent D — Caracas metropolitan area, Venezuela
+  - What they use today: Binance P2P, Pago Móvil bank transfers, and informal USD cash transactions.
+  - What they like: Fast digital payments (Pago Móvil) and holding USD-linked assets.
+  - What frustrates them: Scarcity of physical USD/local fiat cash and high exchange/broker fees (often >5%).
+  - What would make them switch: Direct connection to nearby verified cash providers at low transaction fees (<2%) with instant escrow settlement.
+  - Dealbreaker: High rate of transaction failures or lack of secure escrows to prevent loss/theft of digital assets during cash exchanges.
+
+Aggregate signal:
+- **Current alternatives:** Users rely heavily on established retail/agent networks (OXXO, Efecty), mobile wallets, and crypto P2P platforms (Binance) depending on the country's economic context.
+- **Key switching drivers:** Lower transaction fees, zero queues, higher system uptime (avoiding wallet outages), and safer/more localized physical exchange points.
+- **Key dealbreakers:** Escrow/security concerns (fear of losing funds), high entry friction (e.g. upfront payments or heavy KYC for small amounts), and poor app usability/technical complexity.
 
 ### V-8 · Fair commission / fee tolerance
 _(no responses yet)_
