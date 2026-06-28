@@ -465,6 +465,96 @@ usuario pierde la llave, pierde los fondos para siempre, y hoy ni siquiera sabe 
 - Depende del modelo de **una sola identidad por dispositivo** (#160): antes de eso el dispositivo
   tiene dos keypairs y no hay "una" llave única que mostrar/respaldar.
 
+---
+
+## 11. Borradores de cambios derivados de la validación (T-1…T-5)
+
+> **Origen:** síntesis de las validaciones de mercado/producto V-1…V-14 (ver
+> [`WAVE6_CONTRIBUTORS_REPORT.md`](./WAVE6_CONTRIBUTORS_REPORT.md)). Cada cambio traduce una señal
+> repetida de los respondientes a un cambio concreto de la app.
+> **Estado:** redactados 2026-06-27, **sin publicar**. Casi todos tocan el flujo de trade /
+> descubrimiento, que se solapa con #160 (`App.tsx`) y P1-1 (#151) — publicar **por tandas tras**
+> aterrizar el núcleo P0/P1 para no chocar. Verificación de código ya hecha: el alcance de T-2 y T-3
+> está ajustado a lo que realmente falta.
+
+### T-1 · Confirmación post-selección con tasa bloqueada + estado en línea del agente
+**Labels:** `wave:frontend` · `wave:trust` · `complexity: medium` · `Stellar Wave`
+**Evidencia:** V-5 (tres señales no negociables), V-13 (certeza antes de comprometerse)
+**Dependencias:** P0-2/#160 (proveedor real) · P1-1/#151 (economía real) · P1-4 (tasa en vivo, hecho)
+
+- **Estado actual:** `TradeConfirmation` existe pero es **pre-mapa** — usa comerciante "de ejemplo"
+  y tasa "referencial", antes de elegir proveedor.
+- **Qué construir:** una confirmación **del proveedor ya seleccionado**, justo antes de comprometer
+  el efectivo, que muestre las 3 señales de V-5: (1) **fee total exacto**, (2) **tasa/monto MXN
+  bloqueado** (no "referencial"), (3) **estado en línea/activo** del agente. Y (V-13) un indicador de
+  **disponibilidad de proveedores cercanos** por si el elegido cae.
+- **Criterio de aceptación:**
+  - [ ] La pantalla refleja el `seller` real elegido (no "ejemplo").
+  - [ ] Muestra el MXN exacto a recibir con tasa bloqueada al momento de confirmar.
+  - [ ] Muestra el estado en línea del agente; si está offline, bloquea o advierte.
+  - [ ] El usuario ve cuántos proveedores cercanos hay como respaldo.
+
+### T-2 · Estado de falla explícito + ruta de disputa/soporte
+**Labels:** `wave:frontend` · `wave:trust` · `complexity: medium` · `Stellar Wave`
+**Evidencia:** V-2, V-5 (la red falla en el momento del efectivo), **V-11** (sin explicación tras la falla; soporte solo en sucursal)
+**Dependencias:** se apoya en `TradeStateBadge` y `SupportLink` ya existentes (parcialmente independiente)
+
+- **Estado actual:** `TradeStateBadge` ya cubre `locked/pending_cash/revealed/completed/cancelled/
+  expired/refunded` con copy de "qué pasó / qué sigue / tu dinero está seguro" + recuperación. Falta
+  lo que pide V-11: un **estado de falla con explicación clara** y una **ruta de disputa**.
+- **Qué construir:** (1) un estado `failed`/error con explicación en lenguaje simple de qué ocurrió
+  y qué pasa con los fondos; (2) un **botón de disputa/escalamiento** visible desde los estados
+  atascados (no solo "reintentar") que abra `SupportLink` / inicie una disputa sin requerir trámite
+  presencial.
+- **Criterio de aceptación:**
+  - [ ] Una operación que falla muestra causa + estado de los fondos, no un error genérico.
+  - [ ] Desde un estado atascado/fallido el usuario puede abrir una disputa o contactar soporte en
+        ≤1 toque.
+  - [ ] El mensaje siempre deja claro dónde está el dinero (en garantía / en devolución).
+
+### T-3 · Surfacear reputación en las tarjetas de descubrimiento
+**Labels:** `wave:frontend` · `wave:retail` · `complexity: low` · `Stellar Wave`
+**Evidencia:** V-7 (alternativas/confianza), V-9 (negocio conocido vs individuo), V-12 (calificaciones + escrow)
+**Dependencias:** solapa con P1-1/#151 (misma tarjeta de proveedor)
+
+- **Estado actual:** el badge "verificado" ya se muestra (DepositMap, ChatRoom, Home…) y hay rating
+  de estrellas en `SuccessScreen`. **Pero** `completion_rate`, `trades_completed` y `tier` —que el
+  backend ya guarda— **no se muestran en el descubrimiento**, que es donde el usuario decide.
+- **Qué construir:** mostrar en cada tarjeta de proveedor: **% de completitud**, **# de trades**,
+  **tier**, y una etiqueta de **tipo de negocio** (negocio conocido vs individuo, señal de V-9/V-12).
+- **Criterio de aceptación:**
+  - [ ] Cada tarjeta muestra completitud + trades + tier reales de la API (no constantes).
+  - [ ] Se distingue visualmente "negocio establecido" de "individuo".
+  - [ ] Coordinado con P1-1 (#151) para no duplicar el refactor de la tarjeta.
+
+### T-4 · Visibilidad del escrow para el proveedor antes de entregar efectivo
+**Labels:** `wave:frontend` · `wave:backend` · `wave:trust` · `complexity: medium` · `Stellar Wave`
+**Evidencia:** V-3 y V-8 (el disparador de confianza #1 del lado oferta), V-12 (escrow visible)
+**Dependencias:** 🔒 P0-2/#160 (contraparte/proveedor real)
+
+- **Estado actual:** no existe vista del lado proveedor que confirme el bloqueo del escrow.
+- **Qué construir:** una vista lado-proveedor que muestre, **antes de que entregue el efectivo**, que
+  el USDC del comprador está **bloqueado en garantía** (estado on-chain/HTLC), con monto y referencia
+  de la operación.
+- **Criterio de aceptación:**
+  - [ ] El proveedor ve "fondos bloqueados en garantía" con monto antes de marcar entrega.
+  - [ ] El indicador refleja el estado real del HTLC/escrow, no un mock.
+  - [ ] Si el escrow no está bloqueado, la UI no invita a entregar efectivo.
+
+### T-5 · Transparencia de fee efectivo + guardrail >5%
+**Labels:** `wave:frontend` · `wave:retail` · `complexity: low` · `Stellar Wave`
+**Evidencia:** V-1, V-3, V-7, V-8 (techo universal 2–5%; >5% pierde frente al canal tradicional)
+**Dependencias:** P1-1/#151 (comisión real del proveedor)
+
+- **Estado actual:** la UI solo muestra el **0.8% de plataforma**; no el spread/comisión del proveedor
+  ni un techo.
+- **Qué construir:** mostrar el **costo total efectivo** (plataforma + comisión del proveedor) de forma
+  prominente, y **advertir/limitar** cuando el total supere ~5%.
+- **Criterio de aceptación:**
+  - [ ] El usuario ve el % total efectivo, no solo el de plataforma.
+  - [ ] Si el total > ~5%, se muestra advertencia clara (o se filtra/ordena por costo).
+  - [ ] El umbral es configurable (no hardcodeado en el componente).
+
 
 
 
