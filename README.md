@@ -161,18 +161,19 @@ Anyone with MXN cash can join as a liquidity provider — neighbors, street vend
 
 ### 📊 CETES Tokenizados (via Etherfuse)
 - Invest in Mexican government bonds tokenized on Stellar
-- **~10% APY** — accessible from the same wallet, no broker, no bank account
-- Buy/sell with XLM, USDC, or MXNe (uses Stellar `pathPaymentStrictReceive`)
-- Full UI implemented; transactions simulated on testnet — mainnet-ready architecture
+- Competitive APY — accessible from the same wallet, no broker, no bank account
+- Buy/sell with XLM, USDC, or MXNe via Stellar DEX (`pathPaymentStrictSend`)
+- Full UI implemented; DEX swap connected — mainnet requires CETES liquidity on Stellar
 
 ### 🏦 Blend DeFi
-- **Borrow**: Deposit XLM as collateral → get USDC/MXNe instantly (70% LTV, health factor tracked)
+- **Borrow**: Deposit XLM as collateral → get USDC/MXNe instantly (health factor tracked)
 - **Yield**: Supply crypto to earn yield via Blend Protocol
 - Full UI implemented (pool data, health factor, supply/borrow flows); mainnet-ready architecture
 
 ### 🔗 Etherfuse On/Off Ramp
-- Architecture supports connecting a Mexican bank account → transfer MXN ↔ USDC on Stellar
-- Entry point is the P2P merchant network (cash in/out); full SPEI bridge planned for mainnet
+- Architecture supports connecting a Mexican bank account → buy/sell CETES (tokenized Mexican government bonds) on Stellar via SPEI
+- Onramp: SPEI transfer → CETES credited to Stellar wallet. Offramp: CETES sent on-chain → MXN via SPEI to bank account
+- Full implementation plan documented; SPEI bridge planned for mainnet
 
 ### The claim_url — QR for any interface
 
@@ -201,8 +202,8 @@ The user opens the URL → full-screen QR → shows it to the merchant. **No app
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/ericmt-98/micopay-mvp
-cd micopay-mvp && npm install
+git clone https://github.com/ericmt-98/micopay-protocol
+cd micopay-protocol && npm install
 
 # 2. Configure
 cp apps/api/.env.example apps/api/.env
@@ -313,7 +314,7 @@ Agent → POST /api/v1/cash/request
 ## Repository Structure
 
 ```
-micopay-mvp/
+micopay-protocol/
 ├── contracts/
 │   ├── htlc-core/              # HashedTimeLock trait (Rust, shared)
 │   ├── atomic-swap/            # AtomicSwapHTLC — cross-chain HTLC, 15 tests
