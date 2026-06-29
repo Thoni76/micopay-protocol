@@ -2,6 +2,7 @@ import axios from 'axios';
 import { extractApiErrorPayload, toApiError } from '../utils/apiError';
 import { signChallenge, getPublicKey } from '../lib/keystore';
 import { removeKey } from './secureStorage';
+import { PLATFORM_FEE_PERCENT } from '../constants/trade';
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 
@@ -476,6 +477,27 @@ export interface AvailableMerchant {
   seller_type?: string;
   /** Backwards-compatible boolean marker for business sellers (optional) */
   is_business?: boolean;
+  /** Platform fee (%) for this merchant. Falls back to PLATFORM_FEE_PERCENT if absent. */
+  platform_fee_pct?: number;
+}
+
+/**
+ * Effective-fee guardrail. Validations V-1/V-3/V-7/V-8 found a universal ceiling:
+ * users abandon MicoPay when the *total* cost exceeds ~5%. The UI warns above this
+ * threshold. Kept here (not hardcoded in components) so it can be tuned centrally.
+ */
+export const MAX_EFFECTIVE_FEE_PERCENT = 5;
+
+/**
+ * Total effective cost the user pays = provider commission + platform fee.
+ * `platformPct` defaults to the shared `PLATFORM_FEE_PERCENT` constant because the
+ * `/merchants/available` response does not (yet) carry a per-merchant platform fee.
+ */
+export function effectiveFeePercent(
+  providerPct: number,
+  platformPct: number = PLATFORM_FEE_PERCENT,
+): number {
+  return providerPct + platformPct;
 }
 
 export interface MerchantsAvailableQuery {
