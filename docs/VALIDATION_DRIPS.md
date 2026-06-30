@@ -298,6 +298,17 @@ I would immediately walk away if the platform lacked user verification or encour
 
 If the entire experience was smooth, secure, and exactly as the platform promised, I would gladly recommend it. A simple onboarding process, reliable transaction completion, and the confidence that my issue would be resolved if anything went wrong would make me comfortable suggesting it to friends.
 
+### V-19 · Freelancer / remote worker paid by clients abroad
+**Contributor:** [@Antigravity](https://github.com/Antigravity) · **Issue:** [#234](https://github.com/ericmt-98/micopay-protocol/issues/234)
+
+First-person response (privacy-safe):
+
+- **How clients/employers abroad pay you today:** I typically receive payments via international wire transfer directly to my local bank account or through digital wallet services like PayPal or Wise. Sometimes, I also receive payments in crypto (USDC or USDT) directly to a self-custodial wallet.
+- **What's the worst part of receiving that money:** The biggest frustration is the unpredictability of the final amount and timing. With bank wires, intermediary banks deduct hidden fees, and the exchange rate applied is often significantly worse than the market rate. The funds can also take days to clear, and occasionally, transactions are flagged or delayed for vague compliance reasons, requiring extra paperwork.
+- **Roughly what share of the payment is lost to fees + exchange spread combined:** I typically lose between 5% and 10% of the total payment due to the combination of fixed wire fees and unfavorable exchange rate spreads.
+- **Would receiving "dollars" you could then cash out locally or spend at a store solve a real problem for you? Which part matters most:** Yes, this would solve a massive problem. The most important part is the **certainty of the final local value**. If I receive a stable dollar value and know exactly what exchange rate I'll get when cashing out locally, it removes the anxiety of hidden bank fees and fluctuating conversion rates. Speed is also highly beneficial.
+- **What would make you not trust getting paid this way:** I would hesitate if the local cash-out process felt sketchy—for example, if I had to meet up with unverified strangers rather than established local businesses. I'd also lose trust if the platform had hidden fees or if the digital wallet was overly complicated and I feared losing access to my funds.
+
 ---
 
 ## How findings feed Wave 6 product work
