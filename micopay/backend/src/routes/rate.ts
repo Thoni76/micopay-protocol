@@ -20,39 +20,57 @@ export function __resetCache(): void {
 
 const round = (n: number) => Math.round(n * 1e6) / 1e6;
 
-/**
- * Real XLM→MXN composed from XLM/USD (Binance) × USD/MXN (er-api). Both are
- * reachable from cloud IPs (unlike CoinGecko, which 429s from shared egress).
- */
-async function fetchFromBinanceErapi(): Promise<CacheEntry> {
-  const [xlmUsd, usdMxn] = await Promise.all([
-    fetch('https://api.binance.com/api/v3/ticker/price?symbol=XLMUSDT', {
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    })
-      .then((r) => r.json())
-      .then((d: any) => parseFloat(d?.price)),
-    fetch('https://open.er-api.com/v6/latest/USD', { signal: AbortSignal.timeout(TIMEOUT_MS) })
-      .then((r) => r.json())
-      .then((d: any) => Number(d?.rates?.MXN)),
-  ]);
-  if (!(xlmUsd > 0) || !(usdMxn > 0)) {
-    throw new Error(`bad binance/erapi payload: xlmUsd=${xlmUsd} usdMxn=${usdMxn}`);
-  }
-  return { rate: round(xlmUsd * usdMxn), source: 'binance+erapi', fetchedAt: new Date().toISOString() };
+const j = (url: string) =>
+  fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS), headers: { Accept: 'application/json', 'User-Agent': 'micopay/1.0' } }).then(
+    (r) => {
+      if (!r.ok) throw new Error(`${url} → ${r.status}`);
+      return r.json() as Promise<any>;
+    },
+  );
+
+/** USD→MXN from er-api (open, no key). */
+async function getUsdMxn(): Promise<number> {
+  const d = await j('https://open.er-api.com/v6/latest/USD');
+  const v = Number(d?.rates?.MXN);
+  if (!(v > 0)) throw new Error('er-api MXN missing');
+  return v;
 }
 
-/** Secondary: CoinGecko direct XLM/MXN (works when not rate-limited). */
-async function fetchFromCoinGecko(): Promise<CacheEntry> {
-  const res = await fetch(
-    'https://api.coingecko.com/api/v3/simple/price?ids=stellar&vs_currencies=mxn',
-    { signal: AbortSignal.timeout(TIMEOUT_MS), headers: { Accept: 'application/json', 'User-Agent': 'micopay/1.0' } },
-  );
-  if (!res.ok) throw new Error(`CoinGecko ${res.status}`);
-  const data = (await res.json()) as { stellar?: { mxn?: number } };
-  const rate = data?.stellar?.mxn;
-  if (!(typeof rate === 'number' && rate > 0)) throw new Error('bad coingecko payload');
-  return { rate, source: 'coingecko', fetchedAt: new Date().toISOString() };
-}
+/**
+ * Live XLM→MXN sources, ordered by reliability from a US datacenter egress
+ * (Render). Coinbase/Kraken allow US/cloud IPs; Binance geo-blocks them;
+ * CoinGecko rate-limits them. First source that returns a valid rate wins.
+ */
+const SOURCES: Array<() => Promise<CacheEntry>> = [
+  // Coinbase XLM-USD × er-api USD-MXN
+  async () => {
+    const d = await j('https://api.coinbase.com/v2/prices/XLM-USD/spot');
+    const xlmUsd = Number(d?.data?.amount);
+    if (!(xlmUsd > 0)) throw new Error('coinbase bad');
+    return { rate: round(xlmUsd * (await getUsdMxn())), source: 'coinbase+erapi', fetchedAt: new Date().toISOString() };
+  },
+  // Kraken XLMUSD × er-api USD-MXN
+  async () => {
+    const d = await j('https://api.kraken.com/0/public/Ticker?pair=XLMUSD');
+    const xlmUsd = parseFloat(d?.result?.XXLMZUSD?.c?.[0]);
+    if (!(xlmUsd > 0)) throw new Error('kraken bad');
+    return { rate: round(xlmUsd * (await getUsdMxn())), source: 'kraken+erapi', fetchedAt: new Date().toISOString() };
+  },
+  // CoinGecko direct XLM→MXN
+  async () => {
+    const d = await j('https://api.coingecko.com/api/v3/simple/price?ids=stellar&vs_currencies=mxn');
+    const rate = Number(d?.stellar?.mxn);
+    if (!(rate > 0)) throw new Error('coingecko bad');
+    return { rate, source: 'coingecko', fetchedAt: new Date().toISOString() };
+  },
+  // Binance XLMUSDT × er-api (may be geo-blocked)
+  async () => {
+    const d = await j('https://api.binance.com/api/v3/ticker/price?symbol=XLMUSDT');
+    const xlmUsd = parseFloat(d?.price);
+    if (!(xlmUsd > 0)) throw new Error('binance bad');
+    return { rate: round(xlmUsd * (await getUsdMxn())), source: 'binance+erapi', fetchedAt: new Date().toISOString() };
+  },
+];
 
 export async function rateRoutes(app: FastifyInstance) {
   app.get('/rate/xlm-mxn', async (request) => {
@@ -62,8 +80,7 @@ export async function rateRoutes(app: FastifyInstance) {
       return cache;
     }
 
-    // Try real sources in order of reliability-from-cloud.
-    for (const source of [fetchFromBinanceErapi, fetchFromCoinGecko]) {
+    for (const source of SOURCES) {
       try {
         const fresh = await source();
         cache = fresh;
